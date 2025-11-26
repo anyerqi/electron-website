@@ -91,7 +91,8 @@ module.exports = {
   }
 
   // Write the full auto-update module when enabled using update-electron-app
-  const moduleContent = `const updateElectronApp = require('update-electron-app');
+  // Note: update-electron-app v2+ uses ES module default export, need to destructure
+  const moduleContent = `const { updateElectronApp } = require('update-electron-app');
 
 module.exports = {
   enabled: true,

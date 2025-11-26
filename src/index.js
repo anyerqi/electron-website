@@ -1,9 +1,31 @@
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, protocol, net } = require('electron');
 const path = require('path');
-const { URL } = require('url');
+const { URL, pathToFileURL } = require('url');
 
 const sitePath = 'dist';
 const indexFileName = 'index.html';
+const CUSTOM_SCHEME = 'webapp';
+
+// Get the absolute path to the site directory
+const getSiteBasePath = () => {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, sitePath);
+  }
+  return path.join(__dirname, '..', sitePath);
+};
+
+// Register the custom scheme as privileged before app is ready
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: CUSTOM_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
+]);
 
 // Initialize auto-update module (may be stub if disabled)
 const autoUpdate = require('./auto-update');
@@ -27,32 +49,32 @@ if (process.platform === 'darwin') {
     Menu.setApplicationMenu(null);
   }
 
-const resolveAppPath = (targetPath) => {
-  return path.join(sitePath, targetPath);
-};
-
 // Handle opening new windows and external links
 const openHandler = ({ url, disposition }) => {
     const targetDispositions = new Set(['foreground-tab', 'new-window']);
     if (!targetDispositions.has(disposition) || !url) {
       return { action: 'allow' };
     }
-    if (url.startsWith('file://')) {
-      const parsedUrl = new URL(url);
-      let localPath = path.normalize(decodeURIComponent(parsedUrl.pathname));
-      if (process.platform === 'win32' && /^\\[A-Z]\:/.test(localPath)) {
-        localPath = localPath.slice(3);
+    
+    const parsedUrl = new URL(url);
+    
+    // Handle internal app:// protocol links
+    if (parsedUrl.protocol === `${CUSTOM_SCHEME}:`) {
+      let localPath = decodeURIComponent(parsedUrl.pathname);
+      if (localPath.startsWith('/')) {
+        localPath = localPath.slice(1);
       }
-      console.log('Opening internal URL in new window:', localPath); 
+      console.log('Opening internal URL in new window:', localPath);
       // append the final index.html if the path is a directory
-      if (localPath.endsWith('html') === false) {
+      if (!localPath.endsWith('html')) {
         localPath = path.join(localPath, indexFileName);
       }
       createWindow(localPath);
-    } else {
-      console.log('Opening external URL in default browser:', url);
-      shell.openExternal(url);
-    }
+      return { action: 'deny' };
+    } 
+    // Open external URLs in default browser
+    console.log('Opening external URL in default browser:', url);
+    shell.openExternal(url);
     return { action: 'deny' };
 };
 
@@ -66,9 +88,9 @@ const createWindow = (filePath) => {
       devTools: false,
     },
   });
-  // and load the index.html of the app from the packaged assets.
-  const assetPath = resolveAppPath(filePath);
-  newWindow.loadFile(assetPath);
+  // Load the page using custom protocol to handle absolute paths correctly
+  const appUrl = `${CUSTOM_SCHEME}://localhost/${filePath}`;
+  newWindow.loadURL(appUrl);
 
   // Open the DevTools.
   //newWindow.webContents.openDevTools();
@@ -86,6 +108,24 @@ const createMainWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
+  // Register custom protocol handler for serving static files
+  // This fixes Next.js static export paths like /_next/static/...
+  protocol.handle(CUSTOM_SCHEME, (request) => {
+    const url = new URL(request.url);
+    let urlPath = decodeURIComponent(url.pathname);
+    
+    // Remove leading slash for path.join
+    if (urlPath.startsWith('/')) {
+      urlPath = urlPath.slice(1);
+    }
+    
+    const siteBasePath = getSiteBasePath();
+    const filePath = path.join(siteBasePath, urlPath);
+    
+    // Convert to file URL and use net.fetch
+    return net.fetch(pathToFileURL(filePath).toString());
+  });
+
   createMainWindow();
   // Initialize auto-update if enabled
   if (autoUpdate.enabled) {
