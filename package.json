@@ -1,0 +1,35 @@
+{
+  "name": "electron-website",
+  "productName": "electron-website",
+  "version": "1.0.0",
+  "description": "Package Site as Electron App",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "make-universal": "electron-forge make --arch=universal",
+    "publish": "electron-forge publish",
+    "lint": "echo \"No linting configured\""
+  },
+  "author": {
+    "name": "anyerqi"
+  },
+  "keywords": [],
+  "license": "MIT",
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
+    "update-electron-app": "^3.0.0"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^6.4.2",
+    "@electron-forge/maker-deb": "^6.4.2",
+    "@electron-forge/maker-dmg": "^7.10.2",
+    "@electron-forge/maker-rpm": "^6.4.2",
+    "@electron-forge/maker-squirrel": "^6.4.2",
+    "@electron-forge/maker-zip": "^6.4.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^6.4.2",
+    "@electron-forge/publisher-github": "^6.4.2",
+    "electron": "39.2.3"
+  }
+}

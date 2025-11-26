@@ -1,0 +1,112 @@
+name: "Website to Electron"
+description: "Package a built static website into an Electron desktop app via Electron Forge."
+branding:
+  icon: "package"
+  color: "blue"
+
+inputs:
+  site-path:
+    description: "Path to the built static site directory to embed."
+    required: true
+    default: "dist"
+  app-name:
+    description: "Package name (kebab-case) used by Electron Forge."
+    required: false
+    default: "website-app"
+  product-name:
+    description: "Display/product name shown in installers."
+    required: false
+    default: "Website App"
+  app-version:
+    description: "Version to embed in the packaged app."
+    required: false
+  app-description:
+    description: "Description shown in installers."
+    required: false
+  author:
+    description: "Author name to set in package.json."
+    required: false
+  icon-icns-path:
+    description: "Path to a .icns icon for macOS builds."
+    required: false
+  icon-ico-path:
+    description: "Path to a .ico icon for Windows builds."
+    required: false
+  icon-png-path:
+    description: "Path to a .png icon used by DMG/background assets."
+    required: false
+  auto-update:
+    description: "Enable auto-update via GitHub Releases (uses current repository). Will publish artifacts to GitHub Releases."
+    required: false
+    default: "false"
+  github-token:
+    description: "GitHub token for publishing releases (required if auto-update is true). Use secrets.GITHUB_TOKEN."
+    required: false
+
+outputs:
+  artifact-path:
+    description: "Location of the generated Electron Forge artifacts."
+    value: ${{ steps.expose-artifacts.outputs.artifact-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci
+
+    - name: Prepare static site and metadata
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        SITE_PATH: ${{ inputs.site-path }}
+        APP_NAME: ${{ inputs.app-name }}
+        PRODUCT_NAME: ${{ inputs.product-name }}
+        APP_VERSION: ${{ inputs.app-version }}
+        APP_DESCRIPTION: ${{ inputs.app-description }}
+        AUTHOR: ${{ inputs.author }}
+        ICON_ICNS_PATH: ${{ inputs.icon-icns-path }}
+        ICON_ICO_PATH: ${{ inputs.icon-ico-path }}
+        ICON_PNG_PATH: ${{ inputs.icon-png-path }}
+        AUTO_UPDATE: ${{ inputs.auto-update }}
+        GITHUB_OWNER: ${{ github.repository_owner }}
+        GITHUB_REPO: ${{ github.event.repository.name }}
+      run: node scripts/prepare-action.js
+
+    - name: Build Electron packages
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          npm run make-universal
+        else
+          npm run make
+        fi
+
+    - name: Publish to GitHub Releases
+      if: ${{ inputs.auto-update == 'true' }}
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: npm run publish
+
+    - name: Copy artifacts to workspace
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        rm -rf "$GITHUB_WORKSPACE/electron-out"
+        mkdir -p "$GITHUB_WORKSPACE/electron-out"
+        cp -R "$ACTION_PATH/out/." "$GITHUB_WORKSPACE/electron-out/"
+
+    - name: Expose artifact path
+      id: expose-artifacts
+      shell: bash
+      run: echo "artifact-path=$GITHUB_WORKSPACE/electron-out" >> "$GITHUB_OUTPUT"
