@@ -80,6 +80,7 @@ runs:
       run: node scripts/prepare-action.js
 
     - name: Build Electron packages
+      if: ${{ inputs.auto-update != 'true' }}
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
@@ -95,9 +96,15 @@ runs:
       working-directory: ${{ github.action_path }}
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
-      run: npm run publish
+      run: |
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          npm run publish-universal
+        else
+          npm run publish
+        fi
 
     - name: Copy artifacts to workspace
+      if: ${{ inputs.auto-update != 'true' }}
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
@@ -107,6 +114,7 @@ runs:
         cp -R "$ACTION_PATH/out/." "$GITHUB_WORKSPACE/electron-out/"
 
     - name: Expose artifact path
+      if: ${{ inputs.auto-update != 'true' }}
       id: expose-artifacts
       shell: bash
       run: echo "artifact-path=$GITHUB_WORKSPACE/electron-out" >> "$GITHUB_OUTPUT"
