@@ -74,6 +74,7 @@ module.exports = {
             name: publishConfig.repo,
           },
           prerelease: false,
+          draft: false,
         },
       },
     ],
