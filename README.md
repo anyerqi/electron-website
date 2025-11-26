@@ -25,7 +25,7 @@ jobs:
           npm run build
 
       - name: Package Electron app
-        uses: anyerqi/website-app@main
+        uses: anyerqi/electron-website@main
         with:
           site-path: build
           app-name: my-site-app
@@ -66,7 +66,7 @@ jobs:
           npm run build
 
       - name: Package and Publish Electron app
-        uses: anyerqi/website-app@main
+        uses: anyerqi/electron-website@main
         with:
           site-path: build
           app-name: my-site-app
