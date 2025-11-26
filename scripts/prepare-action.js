@@ -107,11 +107,19 @@ module.exports = {
   console.log('Auto-update module generated with update-electron-app');
 };
 
+// Normalize version string for Windows compatibility
+// Windows rcedit requires version format X.Y.Z, not vX.Y.Z
+const normalizeVersion = (version) => {
+  if (!version) return version;
+  // Remove leading 'v' or 'V' if present
+  return version.replace(/^v/i, '');
+};
+
 const main = () => {
   const sitePath = input('SITE_PATH', 'dist');
   const appNameInput = input('APP_NAME');
   const productName = input('PRODUCT_NAME');
-  const appVersion = input('APP_VERSION');
+  const appVersion = normalizeVersion(input('APP_VERSION'));
   const appDescription = input('APP_DESCRIPTION');
   const author = input('AUTHOR');
   const iconIcns = input('ICON_ICNS_PATH');
