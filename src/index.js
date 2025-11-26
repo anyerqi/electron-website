@@ -9,7 +9,8 @@ const CUSTOM_SCHEME = 'webapp';
 // Get the absolute path to the site directory
 const getSiteBasePath = () => {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, sitePath);
+    // In packaged app, dist is inside app.asar
+    return path.join(app.getAppPath(), sitePath);
   }
   return path.join(__dirname, '..', sitePath);
 };
@@ -85,7 +86,7 @@ const createWindow = (filePath) => {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      devTools: false,
+      //devTools: false,
     },
   });
   // Load the page using custom protocol to handle absolute paths correctly
@@ -93,7 +94,7 @@ const createWindow = (filePath) => {
   newWindow.loadURL(appUrl);
 
   // Open the DevTools.
-  //newWindow.webContents.openDevTools();
+  newWindow.webContents.openDevTools();
 
   newWindow.webContents.setWindowOpenHandler(openHandler);
   return newWindow;
